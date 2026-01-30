@@ -2,14 +2,22 @@ import SwiftUI
 import GRDB
 
 struct StudyView: View {
+
     enum Testament: String, CaseIterable {
         case old = "Old Testament"
         case new = "New Testament"
     }
 
+    struct SelectedChapter: Identifiable, Hashable {
+        let id = UUID()
+        let book: String
+        let chapter: Int
+    }
+
     @State private var selectedTestament: Testament = .old
     @State private var expandedBooks: Set<String> = []
     @State private var chaptersPerBook: [String: Int] = [:]
+    @State private var selectedChapter: SelectedChapter?
 
     private let haptic = UIImpactFeedbackGenerator(style: .light)
 
@@ -33,88 +41,120 @@ struct StudyView: View {
         "3 John", "Jude", "Revelation"
     ]
 
-    var currentBooks: [String] {
+    private var currentBooks: [String] {
         selectedTestament == .old ? oldTestamentBooks : newTestamentBooks
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Testament selector
-            HStack(spacing: 0) {
-                ForEach(Testament.allCases, id: \.self) { testament in
-                    Button {
-                        withAnimation {
-                            haptic.impactOccurred()
-                            selectedTestament = testament
-                            expandedBooks.removeAll()
+        NavigationStack {
+            VStack(spacing: 0) {
+
+                HStack(spacing: 0) {
+                    ForEach(Testament.allCases, id: \.self) { testament in
+                        Button {
+                            withAnimation {
+                                haptic.impactOccurred()
+                                selectedTestament = testament
+                                expandedBooks.removeAll()
+                            }
+                        } label: {
+                            Text(testament.rawValue)
+                                .font(.custom("Palatino", size: 15))
+                                .fontWeight(.medium)
+                                .foregroundColor(selectedTestament == testament ? .white : .black)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(
+                                    selectedTestament == testament
+                                    ? Color.blue
+                                    : Color.clear
+                                )
                         }
-                    } label: {
-                        Text(testament.rawValue)
-                            .font(.custom("Palatino", size: 15))
-                            .fontWeight(.medium)
-                            .foregroundColor(selectedTestament == testament ? .white : .black)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(selectedTestament == testament ? Color.blue : Color.clear)
                     }
                 }
-            }
-            .background(Color(.systemGray5))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .padding(.horizontal, 24)
+                .background(Color(.systemGray5))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
 
-            ScrollView {
-                LazyVStack(spacing: 0, pinnedViews: []) {
-                    ForEach(currentBooks, id: \.self) { book in
-                        VStack(alignment: .leading, spacing: 0) {
-                            HStack {
-                                Text(book)
-                                    .font(.custom("Palatino", size: 17))
-                                Spacer()
-                                Image(systemName: expandedBooks.contains(book) ? "chevron.up" : "chevron.down")
-                                    .foregroundColor(.gray)
-                            }
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 16)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                withAnimation(.easeInOut(duration: 0.25)) {
-                                    haptic.impactOccurred()
-                                    toggleBook(book)
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(currentBooks, id: \.self) { book in
+                            VStack(alignment: .leading, spacing: 0) {
+
+                                // Book row
+                                HStack {
+                                    Text(book)
+                                        .font(.custom("Palatino", size: 17))
+                                    Spacer()
+                                    Image(systemName: expandedBooks.contains(book)
+                                          ? "chevron.up"
+                                          : "chevron.down")
+                                        .foregroundColor(.gray)
                                 }
-                            }
-
-                            if let chapterCount = chaptersPerBook[book] {
-                                LazyVGrid(
-                                    columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 5),
-                                    spacing: 12
-                                ) {
-                                    ForEach(1...chapterCount, id: \.self) { chapter in
-                                        Text("\(chapter)")
-                                            .font(.system(size: 15))
-                                            .frame(width: 65, height: 65)
-                                            .background(Color(.systemGray5))
-                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 16)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    withAnimation(.easeInOut(duration: 0.25)) {
+                                        haptic.impactOccurred()
+                                        toggleBook(book)
                                     }
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.top, 6)
-                                .padding(.bottom, 12)
-                                .opacity(expandedBooks.contains(book) ? 1 : 0)
-                                .frame(height: expandedBooks.contains(book) ? nil : 0)
-                                .clipped()
-                                .animation(.easeInOut(duration: 0.25), value: expandedBooks)
+
+                                // Chapters grid
+                                if let chapterCount = chaptersPerBook[book] {
+                                    LazyVGrid(
+                                        columns: Array(
+                                            repeating: GridItem(.flexible(), spacing: 6),
+                                            count: 5
+                                        ),
+                                        spacing: 12
+                                    ) {
+                                        ForEach(1...chapterCount, id: \.self) { chapter in
+                                            Text("\(chapter)")
+                                                .font(.system(size: 15))
+                                                .frame(width: 65, height: 65)
+                                                .background(Color(.systemGray5))
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                                .onTapGesture {
+                                                    haptic.impactOccurred()
+                                                    selectedChapter = SelectedChapter(
+                                                        book: book,
+                                                        chapter: chapter
+                                                    )
+                                                }
+                                        }
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.top, 6)
+                                    .padding(.bottom, 12)
+                                    .opacity(expandedBooks.contains(book) ? 1 : 0)
+                                    .frame(
+                                        height: expandedBooks.contains(book) ? nil : 0
+                                    )
+                                    .clipped()
+                                    .animation(
+                                        .easeInOut(duration: 0.25),
+                                        value: expandedBooks
+                                    )
+                                }
                             }
+                            .background(Color(.systemBackground))
                         }
-                        .background(Color(.systemBackground))
                     }
+                    .padding(.top, 8)
                 }
-                .padding(.top, 8)
             }
-        }
-        .navigationTitle("Study")
-        .onAppear {
-            preloadChapterCounts()
+            .navigationDestination(item: $selectedChapter) { selection in
+                ReadingView(
+                    book: selection.book,
+                    chapter: selection.chapter
+                )
+            }
+            .onAppear {
+                preloadChapterCounts()
+            }
         }
     }
 

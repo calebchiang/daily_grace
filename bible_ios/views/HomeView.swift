@@ -30,10 +30,8 @@ struct HomeView: View {
                         }
                         .onEnded { value in
                             let threshold = geometry.size.height * 0.1
-                            let predictedEnd = value.predictedEndTranslation.height
 
                             if value.translation.height < -threshold {
-                                // Animate upward swipe
                                 withAnimation(.easeOut(duration: 0.25)) {
                                     totalOffset = -geometry.size.height
                                 }
@@ -41,8 +39,15 @@ struct HomeView: View {
                                     totalOffset = 0
                                     showNextVerse()
                                 }
+
                             } else if value.translation.height > threshold {
-                                // Animate downward swipe
+                                guard currentIndex > 0 else {
+                                    withAnimation(.easeOut(duration: 0.2)) {
+                                        totalOffset = 0
+                                    }
+                                    return
+                                }
+
                                 withAnimation(.easeOut(duration: 0.25)) {
                                     totalOffset = geometry.size.height
                                 }
@@ -50,8 +55,8 @@ struct HomeView: View {
                                     totalOffset = 0
                                     showPreviousVerse()
                                 }
+
                             } else {
-                                // Not enough — snap back
                                 withAnimation(.easeOut(duration: 0.2)) {
                                     totalOffset = 0
                                 }
