@@ -15,29 +15,29 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             HomeView()
                 .tabItem {
-                    Label("Home", systemImage: "house")
+                    Image(systemName: "house")
                 }
                 .tag(0)
 
             SearchView()
                 .tabItem {
-                    Label("Search", systemImage: "magnifyingglass")
+                    Image(systemName: "magnifyingglass")
                 }
                 .tag(1)
 
-            SavedView()
-                .tabItem {
-                    Label("Saved", systemImage: "bookmark")
-                }
-                .tag(2)
+            StudyView()
+                   .tabItem {
+                       Image(systemName: "book")
+                   }
+                   .tag(2)
 
             ProfileView()
                 .tabItem {
-                    Label("Profile", systemImage: "person.crop.circle")
+                    Image(systemName: "person.crop.circle")
                 }
                 .tag(3)
         }
-        .font(.custom("Palatino", size: 13)) 
+        .font(.custom("Palatino", size: 13))
         .onChange(of: selectedTab) {
             haptic.impactOccurred()
         }
